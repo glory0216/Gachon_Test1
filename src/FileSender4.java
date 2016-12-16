@@ -1,9 +1,7 @@
 import java.awt.BorderLayout;
 import java.awt.Container;
-import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -16,56 +14,55 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Random;
 
+import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
-public class FileSender3 {
+public class FileSender4 {
 
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
-		JFrame frame = new JFrame("JFileChooser Popup");
-	    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	    Container contentPane = frame.getContentPane();
-
-	    final JLabel directoryLabel = new JLabel(" ");
-	    directoryLabel.setFont(new Font("Serif", Font.BOLD | Font.ITALIC, 36));
-	    contentPane.add(directoryLabel, BorderLayout.NORTH);
-
-	    final JLabel filenameLabel = new JLabel(" ");
-	    filenameLabel.setFont(new Font("Serif", Font.BOLD | Font.ITALIC, 36));
-	    contentPane.add(filenameLabel, BorderLayout.SOUTH);
-
-	    JFileChooser fileChooser = new JFileChooser(".");
-	    fileChooser.setControlButtonsAreShown(false);
-	    contentPane.add(fileChooser, BorderLayout.CENTER);
-
-	    ActionListener actionListener = new ActionListener() {
-	      public void actionPerformed(ActionEvent actionEvent) {
-	        JFileChooser theFileChooser = (JFileChooser) actionEvent
-	            .getSource();
-	        String command = actionEvent.getActionCommand();
-	        if (command.equals(JFileChooser.APPROVE_SELECTION)) {
-	          File selectedFile = theFileChooser.getSelectedFile();
-	          directoryLabel.setText(selectedFile.getParent());
-	          filenameLabel.setText(selectedFile.getName());
-	        } else if (command.equals(JFileChooser.CANCEL_SELECTION)) {
-	          directoryLabel.setText(" ");
-	          filenameLabel.setText(" ");
-	        }
-	      }
-	    };
-	    fileChooser.addActionListener(actionListener);
-
-	    frame.pack();
-	    frame.setVisible(true);	
+		JFrame frame = new JFrame("XOR_FileTransfer");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		Container contentPane = frame.getContentPane();
 		
-		String sendFileLocation = args[1];
+		JPanel panel = new JPanel();
+		JTextField tf = new JTextField(20);
+		JButton btn = new JButton("CONNECT");
+		
+		btn.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e) {
+				String ipAddress = tf.getText();
+				try {
+					connectServer(ipAddress);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		panel.add(new JLabel("Input IP Address"));
+		panel.add(tf);
+		panel.add(btn);
+		
+		contentPane.add(panel, BorderLayout.CENTER);
+		frame.pack();
+		frame.setVisible(true);
+	
+	}
+
+	private static void connectServer(String ipAddress) throws IOException {
 		Selector selector = Selector.open();
 		SocketChannel connectionClient = SocketChannel.open();
 		connectionClient.configureBlocking(false);
-		connectionClient.connect(new InetSocketAddress(args[0], 1234));
+		connectionClient.connect(new InetSocketAddress(ipAddress, 1234));
 		connectionClient.register(selector, SelectionKey.OP_CONNECT);
+		
+		JFrame frame = new JFrame();
+		JFileChooser fileChooser = new JFileChooser();
 		
 		while(true) {
 			selector.select();
@@ -78,7 +75,7 @@ public class FileSender3 {
 				
 				if(key.isConnectable()) {
 					if(client.isConnectionPending()) {
-						System.out.println("Trying to finish connection");
+						System.out.println("Trying to finish connection.");
 						client.finishConnect();
 					}
 					client.register(selector, SelectionKey.OP_WRITE);
@@ -86,21 +83,28 @@ public class FileSender3 {
 				}
 				
 				if(key.isWritable()) {
-					sendFile(client, sendFileLocation);
+					int result = fileChooser.showOpenDialog(frame);
+			         
+			        if (result == JFileChooser.APPROVE_OPTION) {
+			            //선택한 파일의 경로 반환
+			            String sendFileLocation = fileChooser.getSelectedFile().getPath();
+						sendFile(client, sendFileLocation);
+			        }
+			        
 					client.close();
 					return;
 				}
 				
 			}
 		}
-		
+	
 	}
-
+	
 	private static void sendFile(SocketChannel client, String sendFileLocation) throws IOException {
 		//String fName = "C:\\Test\\jdk-8u111-windows-x64.exe";
 		//String fName = "C:\\Test\\The.Holiday.2006.XviD.AC3.CD1-WAF.avi";
 		String fName = sendFileLocation;
-		int bufferSize = 64 * 1024;
+		int bufferSize = 64 * 1024 * 1024;
 		Path path = Paths.get(fName);
 		FileChannel fileChannel = FileChannel.open(path);
 		ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
@@ -111,6 +115,8 @@ public class FileSender3 {
 		int noOfBytesRead = 0;
 		int noOfBytesWrite = 0;
 		int counter = 0;
+		
+		System.out.println("Start timer, file downloading.");
 
 		do {
 			noOfBytesRead = fileChannel.read(buffer);

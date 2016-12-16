@@ -52,7 +52,7 @@ public class FileReceiver3 {
 		//String outputFile = "/Users/youngkwanglee/Downloads/testDir/test.exe";
 		//String outputFile = "C:\\Test\\test.exe";
 		String outputFile = receiveFileLocation;
-		int bufferSize = 64 * 1024;
+		int bufferSize = 64 * 1024 * 1024;
 		Path path = Paths.get(outputFile);
 		FileChannel fileChannel = FileChannel.open(path, 
 				EnumSet.of(StandardOpenOption.CREATE,
@@ -68,6 +68,7 @@ public class FileReceiver3 {
 			buffer.clear();
 			res = channel.read(buffer);
 			//System.out.println(res);
+			
 			buffer.flip();
 			if(res > 0) {
 				fileChannel.write(buffer);
